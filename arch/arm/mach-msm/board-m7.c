@@ -1493,6 +1493,12 @@ static struct i2c_board_info msm_i2c_mhl_sii9234_info[] =
 static struct msm_bus_vectors hsic_init_vectors[] = {
        {
                .src = MSM_BUS_MASTER_SPS,
+               .dst = MSM_BUS_SLAVE_EBI_CH0,
+               .ab = 0,
+               .ib = 0,
+       },
+       {
+               .src = MSM_BUS_MASTER_SPS,
                .dst = MSM_BUS_SLAVE_SPS,
                .ab = 0,
                .ib = 0,
@@ -1502,9 +1508,15 @@ static struct msm_bus_vectors hsic_init_vectors[] = {
 static struct msm_bus_vectors hsic_max_vectors[] = {
        {
                .src = MSM_BUS_MASTER_SPS,
+               .dst = MSM_BUS_SLAVE_EBI_CH0,
+               .ab = 60000000,         
+               .ib = 960000000,        
+       },
+       {
+               .src = MSM_BUS_MASTER_SPS,
                .dst = MSM_BUS_SLAVE_SPS,
                .ab = 0,
-               .ib = 256000000, 
+               .ib = 512000000, 
        },
 };
 
@@ -3482,14 +3494,14 @@ static int capella_pl_sensor_lpm_power(uint8_t enable)
 	int rc = 0;
 
 	mutex_lock(&pl_sensor_lock);
-	pr_debug("[PS][cm3629] %s: pl_sensor_lock lock\n", __func__);
+	pr_info("[PS][cm3629] %s: pl_sensor_lock lock\n", __func__);
 
 	if (pl_reg_l16 == NULL) {
 		pl_reg_l16 = regulator_get(NULL, "8921_l16");
 		if (IS_ERR(pl_reg_l16)) {
 			pr_err("[PS][cm3629] %s: Unable to get '8921_l16' \n", __func__);
 			mutex_unlock(&pl_sensor_lock);
-			pr_debug("[PS][cm3629] %s: pl_sensor_lock unlock 1\n", __func__);
+			pr_info("[PS][cm3629] %s: pl_sensor_lock unlock 1\n", __func__);
 			return -ENODEV;
 		}
 	}
@@ -3503,7 +3515,7 @@ static int capella_pl_sensor_lpm_power(uint8_t enable)
 			pr_err("'%s' regulator enable failed, rc=%d\n",
 				"pl_reg_l16", rc);
 			mutex_unlock(&pl_sensor_lock);
-			pr_debug("[PS][cm3629] %s: pl_sensor_lock unlock 2\n", __func__);
+			pr_info("[PS][cm3629] %s: pl_sensor_lock unlock 2\n", __func__);
 			return rc;
 		}
 		pr_info("[PS][cm3629] %s: enter lmp,OK\n", __func__);
@@ -3517,14 +3529,14 @@ static int capella_pl_sensor_lpm_power(uint8_t enable)
 			pr_err("'%s' regulator enable failed, rc=%d\n",
 				"pl_reg_l16", rc);
 			mutex_unlock(&pl_sensor_lock);
-			pr_debug("[PS][cm3629] %s: pl_sensor_lock unlock 3\n", __func__);
+			pr_info("[PS][cm3629] %s: pl_sensor_lock unlock 3\n", __func__);
 			return rc;
 		}
-		pr_debug("[PS][cm3629] %s: leave lmp,OK\n", __func__);
+		pr_info("[PS][cm3629] %s: leave lmp,OK\n", __func__);
 		usleep(10);
 	}
 	mutex_unlock(&pl_sensor_lock);
-	pr_debug("[PS][cm3629] %s: pl_sensor_lock unlock 4\n", __func__);
+	pr_info("[PS][cm3629] %s: pl_sensor_lock unlock 4\n", __func__);
 	return rc;
 }
 static struct cm3629_platform_data cm36282_pdata_sk2 = {
@@ -3878,12 +3890,12 @@ static struct mdm_platform_data mdm_platform_data = {
 	.ramdump_timeout_ms = 120000,
 };
 
-static struct tsens_platform_data apq_tsens_pdata  = {
+static struct tsens_platform_data msm_tsens_pdata  = {
 		.tsens_factor		= 1000,
 		.hw_type		= APQ_8064,
 		.patherm0               = -1,
 		.patherm1               = -1,
-		.tsens_num_sensor	= 11,
+		.tsens_num_sensor	= 5,
 		.slope = {1176, 1176, 1154, 1176, 1111,
 			1132, 1132, 1199, 1132, 1199, 1132},
 };
@@ -3895,10 +3907,20 @@ static struct platform_device msm_tsens_device = {
 
 static struct msm_thermal_data msm_thermal_pdata = {
 	.sensor_id = 0,
-/*	.poll_ms = 1000,
-	.limit_temp = 51,
-	.temp_hysteresis = 10,
-	.limit_freq = 918000,*/
+	.poll_ms = 150,
+	.shutdown_temp = 70,
+
+	.allowed_max_high = 68,
+	.allowed_max_low = 60,
+	.allowed_max_freq = 384000,
+
+	.allowed_mid_high = 61,
+	.allowed_mid_low = 51,
+	.allowed_mid_freq = 810000,
+
+	.allowed_low_high = 53,
+	.allowed_low_low = 47,
+	.allowed_low_freq = 1350000,
 };
 
 static int __init check_dq_setup(char *str)
@@ -5590,7 +5612,7 @@ static void __init m7_allocate_memory_regions(void)
 static void __init m7_cdp_init(void)
 {
 	pr_info("%s: init starts\r\n", __func__);
-	msm_tsens_early_init(&apq_tsens_pdata);
+	msm_tsens_early_init(&msm_tsens_pdata);
 	m7_common_init();
 	ethernet_init();
 	msm_rotator_set_split_iommu_domain();

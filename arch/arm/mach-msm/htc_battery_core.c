@@ -28,6 +28,9 @@
 #include <linux/android_alarm.h>
 #include <mach/board_htc.h>
 
+#ifdef CONFIG_TOUCHSCREEN_SYNAPTICS_SWEEP2WAKE
+#include <linux/synaptics_i2c_rmi.h>
+#endif
 
 static ssize_t htc_battery_show_property(struct device *dev,
 					struct device_attribute *attr,
@@ -82,7 +85,7 @@ static struct alarm batt_charger_ctrl_alarm;
 static struct work_struct batt_charger_ctrl_work;
 struct workqueue_struct *batt_charger_ctrl_wq;
 static unsigned int charger_ctrl_stat;
-static unsigned int phone_call_stat;
+unsigned int phone_call_stat;
 
 static int test_power_monitor;
 
@@ -784,18 +787,22 @@ static ssize_t htc_battery_show_property(struct device *dev,
 				battery_core_info.rep.pj_src);
 		break;
 	case PJ_STATUS:
-		
-		if (battery_core_info.rep.pj_full == 3)	{
-			if ((battery_core_info.rep.pj_level - battery_core_info.rep.pj_level_pre) >= 19)
-				BATT_LOG("level diff over 19, level:%d, pre_level:%d\n",
-					battery_core_info.rep.pj_level, battery_core_info.rep.pj_level_pre);
-			else
-				i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", HTC_UI_PJ_FULL);
-		} else { 
-			if (battery_core_info.rep.pj_chg_status == 2 || battery_core_info.rep.charging_enabled)
-				i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", HTC_UI_PJ_CHG);
-			else
-				i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", HTC_UI_PJ_NOT_CHG);
+		if (battery_core_info.rep.pj_src) {
+			
+			if (battery_core_info.rep.pj_full == 3)	{
+				if ((battery_core_info.rep.pj_level - battery_core_info.rep.pj_level_pre) >= 19)
+					BATT_LOG("level diff over 19, level:%d, pre_level:%d\n",
+						battery_core_info.rep.pj_level, battery_core_info.rep.pj_level_pre);
+				else
+					i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", HTC_UI_PJ_FULL);
+			} else { 
+				if (battery_core_info.rep.pj_chg_status == 2 || battery_core_info.rep.charging_enabled)
+					i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", HTC_UI_PJ_CHG);
+				else
+					i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", HTC_UI_PJ_NOT_CHG);
+			}
+		} else {
+			i += scnprintf(buf + i, PAGE_SIZE - i, "%d\n", HTC_UI_PJ_NOT_CHG);
 		}
 		break;
 	case PJ_LEVEL:
